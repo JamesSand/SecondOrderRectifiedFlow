@@ -1,1 +1,4 @@
 wandb
+__pycache__
+checkpoints
+

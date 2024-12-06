@@ -8,8 +8,12 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from tqdm import tqdm
 import wandb
+import os
 
-wandb_enable = True
+wandb_enable = False
+wandb_log_name = "second_order_v2"
+ckpt_dir = "checkpoints"
+os.makedirs(ckpt_dir, exist_ok=True)
 
 D = 10.
 M = D+5
@@ -250,43 +254,51 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
 
   return rectified_flow, loss_curve
 
+if __name__ == '__main__':
+
+  # generate training data
+  x_0 = samples_0.detach().clone()[torch.randperm(len(samples_0))]
+  x_1 = samples_1.detach().clone()[torch.randperm(len(samples_1))]
+  x_pairs = torch.stack([x_0, x_1], dim=1)
+  print(x_pairs.shape)
 
 
-# generate training data
-x_0 = samples_0.detach().clone()[torch.randperm(len(samples_0))]
-x_1 = samples_1.detach().clone()[torch.randperm(len(samples_1))]
-x_pairs = torch.stack([x_0, x_1], dim=1)
-print(x_pairs.shape)
+  # training code start
+  iterations = 10000
+  batchsize = 2048
+  input_dim = 2
 
+  rectified_flow_1 = RectifiedFlow(first_order_model=MLP(input_dim, hidden_num=100), second_order_model=MLP_2nd_order(input_dim, hidden_num=100), num_steps=100)
+  rectified_flow_model_parameters = list(rectified_flow_1.first_order_model.parameters()) + list(rectified_flow_1.second_order_model.parameters())
+  optimizer = torch.optim.Adam(rectified_flow_model_parameters, lr=5e-3)
 
-# training code start
-iterations = 10000
-batchsize = 2048
-input_dim = 2
+  if wandb_enable:
+      # wandb init here
+      wandb.init(
+          # set the wandb project where this run will be logged
+          project="rectified_flow",
+          name=wandb_log_name
 
-rectified_flow_1 = RectifiedFlow(first_order_model=MLP(input_dim, hidden_num=100), second_order_model=MLP_2nd_order(input_dim, hidden_num=100), num_steps=100)
-rectified_flow_model_parameters = list(rectified_flow_1.first_order_model.parameters()) + list(rectified_flow_1.second_order_model.parameters())
-optimizer = torch.optim.Adam(rectified_flow_model_parameters, lr=5e-3)
+          # # track hyperparameters and run metadata
+          # config={
+          # "learning_rate": 0.02,
+          # "architecture": "CNN",
+          # "dataset": "CIFAR-100",
+          # "epochs": 10,
+          # }
+      )
 
-if wandb_enable:
-    # wandb init here
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project="rectified_flow",
-        name="second_order_v2"
+  rectified_flow_1, loss_curve = train_rectified_flow(rectified_flow_1, optimizer, x_pairs, batchsize, iterations)
+  plt.plot(np.linspace(0, iterations, iterations+1), loss_curve[:(iterations+1)])
+  plt.title('Training Loss Curve')
 
-        # # track hyperparameters and run metadata
-        # config={
-        # "learning_rate": 0.02,
-        # "architecture": "CNN",
-        # "dataset": "CIFAR-100",
-        # "epochs": 10,
-        # }
-    )
-
-rectified_flow_1, loss_curve = train_rectified_flow(rectified_flow_1, optimizer, x_pairs, batchsize, iterations)
-plt.plot(np.linspace(0, iterations, iterations+1), loss_curve[:(iterations+1)])
-plt.title('Training Loss Curve')
+  # save rectified_flow_1
+  save_dir = os.path.join(ckpt_dir, wandb_log_name)
+  os.makedirs(save_dir, exist_ok=True)
+  first_order_model_save_path = os.path.join(save_dir, 'first_order_model.pt')
+  second_order_model_save_path = os.path.join(save_dir, 'second_order_model.pt')
+  torch.save(rectified_flow_1.first_order_model.state_dict(), first_order_model_save_path)
+  torch.save(rectified_flow_1.second_order_model.state_dict(), second_order_model_save_path)
 
 
 
