@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import wandb
 
+wandb_enable = True
 
 D = 10.
 M = D+5
@@ -37,7 +38,15 @@ plt.legend()
 
 plt.tight_layout()
 
-
+# check if there is nan in torch tensor
+# def has_nan(tensor):
+#     return torch.isnan(tensor).any().item()
+def has_nan(tensor):
+    nan_indices = torch.nonzero(torch.isnan(tensor), as_tuple=True)
+    if len(nan_indices[0]) > 0:
+        return True, nan_indices
+    else:
+        return False, []
 
 class MLP(nn.Module):
     def __init__(self, input_dim=2, hidden_num=100):
@@ -76,6 +85,15 @@ class MLP_2nd_order(nn.Module):
         return x
     
 
+def debug_logger(index, t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta):
+    print(f"t: {t[index]}")
+    print(f"alpha_t: {alpha_t[index]}")
+    print(f"beta_t: {beta_t[index]}")
+    print(f"first_order_alpha: {first_order_alpha[index]}")
+    print(f"first_order_beta: {first_order_beta[index]}")
+    print(f"second_order_alpha: {second_order_alpha[index]}")
+    print(f"second_order_beta: {second_order_beta[index]}")
+
 class RectifiedFlow():
   def __init__(self, first_order_model=None, second_order_model=None, num_steps=1000):
     # self.model = model
@@ -87,7 +105,8 @@ class RectifiedFlow():
 
     # assert False, "Zhizhou: Modified this function, let it return second order before you call it"
 
-    t = torch.rand((z1.shape[0], 1))
+    # we need to exclude 1, since 1 will make first order beta to be inf
+    t = torch.rand((z1.shape[0], 1)) / (1+ 1e-6)
     a = 19.9
     b = 0.1
 
@@ -96,7 +115,7 @@ class RectifiedFlow():
 
     # first order alpha: 
     # d alpha_t / dt = alpha_t * 1/2 * (a (1-t) + b)
-    first_oreder_alpha = alpha_t * (1/2) * (a * (1-t) + b)
+    first_order_alpha = alpha_t * (1/2) * (a * (1-t) + b)
 
     # second order alpha:
     # d^2 alpha_t / dt^2 = 1/2 * (alpha_t * (a(1-x)+b)^2 - a alpha_t)
@@ -106,13 +125,41 @@ class RectifiedFlow():
     beta_t = torch.sqrt(1 - alpha_t**2)
     # first order beta
     # d beta_t / dt = (- alpha  / sqrt{1 - alpha^2}) * (d alpha / dt)
-    first_order_beta = (- alpha_t / torch.sqrt(1 - alpha_t**2)) * first_oreder_alpha
+    first_order_beta = (- alpha_t / torch.sqrt(1 - alpha_t**2)) * first_order_alpha
     # second order beta
     # d^2 beta_t / dt^2 = (- 1  / (1 - alpha^2) sqrt (1 - x^2)) * (d alpha / dt) + (- alpha  / sqrt{1 - alpha^2}) * (d^2 alpha / dt^2)
-    second_order_beta = (- 1 / ((1 - alpha_t**2) * torch.sqrt(1 - alpha_t**2))) * first_oreder_alpha + first_order_beta * second_order_alpha
+    second_order_beta = (- 1 / ((1 - alpha_t**2) * torch.sqrt(1 - alpha_t**2))) * first_order_alpha + first_order_beta * second_order_alpha
+
+    is_alpha_t_nan, nan_indices = has_nan(alpha_t)
+    if is_alpha_t_nan:
+        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
+        breakpoint()
+    is_beta_t_nan, nan_indices = has_nan(beta_t)
+    if is_beta_t_nan:
+        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
+        breakpoint()
+    is_first_order_alpha_nan, nan_indices = has_nan(first_order_alpha)
+    if is_first_order_alpha_nan:
+        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
+        breakpoint()
+    is_first_order_beta_nan, nan_indices = has_nan(first_order_beta)
+    if is_first_order_beta_nan:
+        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
+        breakpoint()
+    is_second_order_alpha_nan, nan_indices = has_nan(second_order_alpha)
+    if is_second_order_alpha_nan:
+        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
+        breakpoint()
+    is_second_order_beta_nan, nan_indices = has_nan(second_order_beta)
+    if is_second_order_beta_nan:
+        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
+        breakpoint()
+
+
+    
 
     z_t = alpha_t * z1 + beta_t * z0
-    first_order_gt = first_oreder_alpha * z1 + first_order_beta * z0
+    first_order_gt = first_order_alpha * z1 + first_order_beta * z0
     second_order_gt = second_order_alpha * z1 + second_order_beta * z0
 
     return z_t, t, first_order_gt, second_order_gt
@@ -183,11 +230,12 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
 
     loss = first_order_loss_mean + second_order_loss_mean
 
-    wandb.log({
-        "first_order_loss": first_order_loss_mean.item(),
-        "second_order_loss": second_order_loss_mean.item(),
-        "total_loss": loss.item()
-    })
+    if wandb_enable:
+        wandb.log({
+            "first_order_loss": first_order_loss_mean.item(),
+            "second_order_loss": second_order_loss_mean.item(),
+            "total_loss": loss.item()
+        })
 
     # loss = first_order_loss + second_order_loss
     # loss = loss.mean()
@@ -220,20 +268,21 @@ rectified_flow_1 = RectifiedFlow(first_order_model=MLP(input_dim, hidden_num=100
 rectified_flow_model_parameters = list(rectified_flow_1.first_order_model.parameters()) + list(rectified_flow_1.second_order_model.parameters())
 optimizer = torch.optim.Adam(rectified_flow_model_parameters, lr=5e-3)
 
-# wandb init here
-wandb.init(
-    # set the wandb project where this run will be logged
-    project="rectified_flow",
-    name="second_order_v1"
+if wandb_enable:
+    # wandb init here
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="rectified_flow",
+        name="second_order_v2"
 
-    # # track hyperparameters and run metadata
-    # config={
-    # "learning_rate": 0.02,
-    # "architecture": "CNN",
-    # "dataset": "CIFAR-100",
-    # "epochs": 10,
-    # }
-)
+        # # track hyperparameters and run metadata
+        # config={
+        # "learning_rate": 0.02,
+        # "architecture": "CNN",
+        # "dataset": "CIFAR-100",
+        # "epochs": 10,
+        # }
+    )
 
 rectified_flow_1, loss_curve = train_rectified_flow(rectified_flow_1, optimizer, x_pairs, batchsize, iterations)
 plt.plot(np.linspace(0, iterations, iterations+1), loss_curve[:(iterations+1)])
