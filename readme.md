@@ -8,11 +8,30 @@ I have trained the second order model. The loss curve is not so good. But the vi
 
 #### Loss curve
 
+First order loss is ok. But second order loss has some spikes.
+
+<div style="display: flex; justify-content: center; gap: 10px;">
+  <img src="images\first_order_loss.png" alt="Figure 1" width="80%">
+</div>
+
+<br>
+
+<div style="display: flex; justify-content: center; gap: 10px;">
+  <img src="images\second_order_loss.png" alt="Figure 2" width="80%">
+</div>
+
+<br>
+
+<div style="display: flex; justify-content: center; gap: 10px;">
+  <img src="images\total_loss.png" alt="Figure 3" width="80%">
+</div>
+
+
 #### Visualization Result
 
 <div style="display: flex; justify-content: center; gap: 10px;">
-  <img src="images/second_order_v2_gen_scatters.png" alt="Figure 1" width="60%">
-  <img src="images/second_order_v2_trajectory.png" alt="Figure 2" width="60%">
+  <img src="images/second_order_v2_gen_scatters.png" alt="Figure 1" width="45%">
+  <img src="images/second_order_v2_trajectory.png" alt="Figure 2" width="45%">
 </div>
 
 
