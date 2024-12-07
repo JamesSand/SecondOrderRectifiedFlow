@@ -58,6 +58,8 @@ first order weight: 1e6; second order weight: 1
 
 The gradient norm is reported under: first order weight: 1e6; second order weight: 1
 
+> Zhizhou Sha: I have little sence about grad norm. I am not sure when should we clip the grad?
+
 <div style="display: flex; justify-content: center; gap: 10px;">
   <img src="images/first_grad_norm.png" alt="Figure 1" width="80%">
 </div>
