@@ -10,9 +10,13 @@ from tqdm import tqdm
 import wandb
 import os
 
-wandb_enable = False
-wandb_log_name = "second_order_v2"
+############# hyper parameters ##########
+wandb_enable = True
+wandb_log_name = "second_order_v5"
 ckpt_dir = "checkpoints"
+first_order_loss_scale = 1e6
+second_order_loss_scale = 1
+
 os.makedirs(ckpt_dir, exist_ok=True)
 
 D = 10.
@@ -167,11 +171,6 @@ class RectifiedFlow():
     second_order_gt = second_order_alpha * z1 + second_order_beta * z0
 
     return z_t, t, first_order_gt, second_order_gt
-
-    # z_t =  t * z1 + (1.-t) * z0
-    # target = z1 - z0
-
-    # return z_t, t, target
   
   def frist_and_second_order_predict(self, z_t, t):
     first_order_pred = self.first_order_model(z_t, t)
@@ -180,8 +179,6 @@ class RectifiedFlow():
 
   @torch.no_grad()
   def sample_ode(self, z0=None, N=None):
-
-    # assert False, "Zhizhou: Modified the sample ode fruntion before you call it"
 
     ### NOTE: Use Euler method to sample from the learned flow
     if N is None:
@@ -194,9 +191,7 @@ class RectifiedFlow():
     traj.append(z.detach().clone())
     for i in range(N):
       t = torch.ones((batchsize,1)) * i / N
-    #   pred = self.model(z, t)
       first_order_pred, second_order_pred = self.frist_and_second_order_predict(z, t)
-    #   z = z.detach().clone() + pred * dt
       z = z.detach().clone() + first_order_pred * dt + 0.5 * second_order_pred * dt**2
 
       traj.append(z.detach().clone())
@@ -205,6 +200,10 @@ class RectifiedFlow():
   
 def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iters):
   loss_curve = []
+
+  first_order_loss_list = []
+  second_order_loss_list = []
+
   for i in tqdm(range(inner_iters+1)):
     optimizer.zero_grad()
     indices = torch.randperm(len(pairs))[:batchsize]
@@ -212,18 +211,10 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
     z0 = batch[:, 0].detach().clone()
     z1 = batch[:, 1].detach().clone()
 
-    # z_t, t, target = rectified_flow.get_train_tuple(z0=z0, z1=z1)
-
     z_t, t, first_order_gt, second_order_gt = rectified_flow.get_train_tuple(z0=z0, z1=z1)
 
     # zt shape: [bs, 2]
     # t shape: [bs, 1]
-
-    # print(z_t.shape)
-    # print(t.shape)
-    # raise
-
-    # pred = rectified_flow.model(z_t, t)
 
     first_order_pred, second_order_pred = rectified_flow.frist_and_second_order_predict(z_t, t)
 
@@ -231,6 +222,9 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
     second_order_loss = (second_order_gt - second_order_pred).abs().pow(2).sum(dim=1)
     first_order_loss_mean = first_order_loss.mean()
     second_order_loss_mean = second_order_loss.mean()
+
+    first_order_loss_mean = first_order_loss_scale * first_order_loss_mean
+    second_order_loss_mean = second_order_loss_scale * second_order_loss_mean 
 
     loss = first_order_loss_mean + second_order_loss_mean
 
@@ -241,16 +235,20 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
             "total_loss": loss.item()
         })
 
-    # loss = first_order_loss + second_order_loss
-    # loss = loss.mean()
-    loss.backward()
+    # for debug
+    first_order_loss_list.append(first_order_loss_mean.item())
+    second_order_loss_list.append(second_order_loss_mean.item())
 
-    # loss = (target - pred).view(pred.shape[0], -1).abs().pow(2).sum(dim=1)
-    # loss = loss.mean()
-    # loss.backward()
+    loss.backward()
 
     optimizer.step()
     loss_curve.append(np.log(loss.item())) ## to store the loss curve
+
+  # calcualte the mean of first and second order loss
+  first_order_loss_avg = np.mean(first_order_loss_list)
+  second_order_loss_avg = np.mean(second_order_loss_list)
+  print("First order loss avg: ", first_order_loss_avg)
+  print("Second order loss avg: ", second_order_loss_avg)
 
   return rectified_flow, loss_curve
 
