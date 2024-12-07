@@ -12,7 +12,7 @@ import os
 
 ############# hyper parameters ##########
 wandb_enable = True
-wandb_log_name = "second_order_v5"
+wandb_log_name = "second_order_v6"
 ckpt_dir = "checkpoints"
 first_order_loss_scale = 1e6
 second_order_loss_scale = 1
@@ -55,6 +55,19 @@ def has_nan(tensor):
         return True, nan_indices
     else:
         return False, []
+
+def get_gradient_norm(model):
+  grad_norm_dict = {}
+  grad_norm_sum = 0.0
+  # Iterate through model parameters and compute gradient norm
+  for name, param in model.named_parameters():
+      if param.grad is not None:  # Check if gradients exist for the parameter
+          grad_norm = param.grad.data.norm(2)  # L2 norm of the gradient
+          grad_norm_dict[name] = grad_norm.item()
+          # print(f"Gradient norm for {name}: {grad_norm.item()}")
+          grad_norm_sum += grad_norm.item()
+
+  return grad_norm_dict, grad_norm_sum
 
 class MLP(nn.Module):
     def __init__(self, input_dim=2, hidden_num=100):
@@ -163,9 +176,6 @@ class RectifiedFlow():
         debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
         breakpoint()
 
-
-    
-
     z_t = alpha_t * z1 + beta_t * z0
     first_order_gt = first_order_alpha * z1 + first_order_beta * z0
     second_order_gt = second_order_alpha * z1 + second_order_beta * z0
@@ -203,6 +213,8 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
 
   first_order_loss_list = []
   second_order_loss_list = []
+  first_order_grad_norm_list = []
+  second_order_grad_norm_list = []
 
   for i in tqdm(range(inner_iters+1)):
     optimizer.zero_grad()
@@ -228,12 +240,7 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
 
     loss = first_order_loss_mean + second_order_loss_mean
 
-    if wandb_enable:
-        wandb.log({
-            "first_order_loss": first_order_loss_mean.item(),
-            "second_order_loss": second_order_loss_mean.item(),
-            "total_loss": loss.item()
-        })
+    
 
     # for debug
     first_order_loss_list.append(first_order_loss_mean.item())
@@ -241,14 +248,41 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
 
     loss.backward()
 
+    # should get the gradient norm here
+    first_order_grad_norm_dict, first_order_grad_norm_sum = get_gradient_norm(rectified_flow.first_order_model)
+
+    # print(first_order_grad_norm_dict)
+    # print(first_order_grad_norm_sum)
+    # breakpoint()
+    # first_order_grad_norm_list.append(first_order_grad_norm_sum)
+
+    second_order_grad_norm_dict, second_order_grad_norm_sum = get_gradient_norm(rectified_flow.second_order_model)
+
+
+    if wandb_enable:
+        wandb.log({
+            "first_order_loss": first_order_loss_mean.item(),
+            "second_order_loss": second_order_loss_mean.item(),
+            "total_loss": loss.item(),
+            "grad_norm/first_order_grad_norm_sum" : first_order_grad_norm_sum,
+            "grad_norm/second_order_grad_norm_sum" : second_order_grad_norm_sum,
+            "grad_norm/first_order_grad_norm_max" : max(first_order_grad_norm_dict.values()),
+            "grad_norm/second_order_grad_norm_max" : max(second_order_grad_norm_dict.values())
+        })
+
+    # print(second_order_grad_norm_dict)
+    # print(second_order_grad_norm_sum)
+    # breakpoint()
+    # second_order_grad_norm_list.append(second_order_grad_norm_sum)
+
     optimizer.step()
     loss_curve.append(np.log(loss.item())) ## to store the loss curve
 
-  # calcualte the mean of first and second order loss
-  first_order_loss_avg = np.mean(first_order_loss_list)
-  second_order_loss_avg = np.mean(second_order_loss_list)
-  print("First order loss avg: ", first_order_loss_avg)
-  print("Second order loss avg: ", second_order_loss_avg)
+  # # calcualte the mean of first and second order loss
+  # first_order_loss_avg = np.mean(first_order_loss_list)
+  # second_order_loss_avg = np.mean(second_order_loss_list)
+  # print("First order loss avg: ", first_order_loss_avg)
+  # print("Second order loss avg: ", second_order_loss_avg)
 
   return rectified_flow, loss_curve
 
