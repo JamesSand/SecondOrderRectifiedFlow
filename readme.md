@@ -33,8 +33,8 @@ First order loss is ok. But second order loss has some spikes.
 #### Visualization Result
 
 <div style="display: flex; justify-content: center; gap: 10px;">
-  <img src="images/second_order_v2_gen_scatters.png" alt="Figure 1" width="45%">
-  <img src="images/second_order_v2_trajectory.png" alt="Figure 2" width="45%">
+  <img src="images/v2_scatter.png" alt="Figure 1" width="45%">
+  <img src="images/v2_traj.png" alt="Figure 2" width="45%">
 </div>
 
 
