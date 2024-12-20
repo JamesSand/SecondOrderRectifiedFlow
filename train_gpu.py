@@ -15,8 +15,8 @@ import argparse
 wandb_enable = False
 wandb_log_name = "second_order_v6"
 ckpt_dir = "checkpoints"
-first_order_loss_scale = 1e6
-second_order_loss_scale = 1
+first_order_loss_scale = 1
+second_order_loss_scale = 1e-8
 
 os.makedirs(ckpt_dir, exist_ok=True)
 
