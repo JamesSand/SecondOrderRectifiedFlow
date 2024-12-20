@@ -91,38 +91,57 @@ if __name__ == "__main__":
 
     # torch fix random seed
     torch.manual_seed(42)
-    final_result = "exp_result.txt"
-    if os.path.exists(final_result):
-        os.remove(final_result)
+    # final_result = "exp_result.txt"
+    # if os.path.exists(final_result):
+    #     os.remove(final_result)
 
-    results_list = []
+    # results_list = []
 
-    second_order_weight_list = ["0.0"] + [f"1e-{i}" for i in range(1, 11)]
+    # # second_order_weight_list = [f"1e-{i}" for i in range(2, 14)]
     # second_order_weight_list = ["0.0", "1e-1"]
-    # second_order_weight_list = ["0.0"]
 
-    for version in range(1, 6):
-        cur_result_list = []
-        print(version, end="")
-        for second_order_weight in second_order_weight_list:
-            model_dir = os.path.join(ckpt_dir, f"{fisrt_order_weight}_{second_order_weight}_V{version}")
-            rectified_flow = load_model_from_dir(model_dir)
-            good_ratio = eval_model(rectified_flow)
-            good_ratio = good_ratio.item()
+    # for version in range(1, 6):
+    #     cur_result_list = []
+    #     for second_order_weight in second_order_weight_list:
+
+    chosen_list = [
+        "1.0_0.0_V1",
+        "1.0_1e-1_V4",
+        "1.0_1e-2_V2",
+        "1.0_1e-3_V4",
+        "1.0_1e-4_V4",
+        "1.0_1e-5_V2",
+        "1.0_1e-6_V7",
+        "1.0_1e-7_V3",
+        "1.0_1e-8_V5",
+        "1.0_1e-9_V5",
+        "1.0_1e-10_V8",
+        "1.0_1e-11_V2",
+        "1.0_1e-12_V10",
+        "1.0_1e-13_V5"
+    ]
+
+
+    # model_dir = 
+    for chose_dir in chosen_list:
+        model_dir = os.path.join(ckpt_dir, chose_dir)
+        rectified_flow = load_model_from_dir(model_dir)
+        good_ratio = eval_model(rectified_flow)
+        good_ratio = good_ratio.item()
+
+        print("-" * 50)
+        print(model_dir)
+        print(good_ratio)
             # print(type(good_ratio))
             # breakpoint()
 
-            cur_result_list.append(good_ratio)
+        #     cur_result_list.append(good_ratio)
 
-            print("&", f"{good_ratio:.2f}", end=" ")
-
-        print("\\\\ \n", end="")
-
-            # print("-" * 50)
-            # print("version", version)
-            # print("second_order_weight:", second_order_weight)
-            # print(f"Good ratio: {good_ratio * 100}%")
-            # print("-" * 50)
+        #     print("-" * 50)
+        #     print("version", version)
+        #     print("second_order_weight:", second_order_weight)
+        #     print(f"Good ratio: {good_ratio * 100}%")
+        #     print("-" * 50)
 
         # results_list.append(cur_result_list)
 

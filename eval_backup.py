@@ -13,15 +13,15 @@ import os
 from train_gpu import MLP, MLP_2nd_order, RectifiedFlow
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-import json
 # import logging
 # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-fisrt_order_weight = 1.0
-# second_order_weight_list = ["0.0"]
-# second_order_weight_list = ["1e-8", "1e-9", "1e-10", "1e-11"]
-# save_dir_name_list = [f"{fisrt_order_weight}_{second_order_weight}" for second_order_weight in second_order_weight_list]
+# fisrt_order_weight = 1.0
+# # second_order_weight_list = ["0.0"]
+# # second_order_weight_list = [f"1e-{i}" for i in range(1, 14)]
+# second_order_weight_list = ["1e-1", "1e-9", "1e-10", "1e-11"]
+# # save_dir_name_list = [f"{fisrt_order_weight}_{second_order_weight}" for second_order_weight in second_order_weight_list]
 
 # wandb_log_name = "second_order_v6"
 ckpt_dir = "checkpoints"
@@ -94,39 +94,21 @@ if __name__ == "__main__":
     final_result = "exp_result.txt"
     if os.path.exists(final_result):
         os.remove(final_result)
+    
+    # sub_dir_path = "1.0_0.0_V"
+    sub_dir_path = "1.0_1e-1_V"
 
-    results_list = []
+    # for second_order_weight in second_order_weight_list:
+    model_dir = os.path.join(ckpt_dir, sub_dir_path)
+    rectified_flow = load_model_from_dir(model_dir)
+    good_ratio = eval_model(rectified_flow)
+    print("-" * 50)
+    print(sub_dir_path)
+    # print("second_order_weight:", second_order_weight)
+    print(f"Good ratio: {good_ratio * 100}%")
+    # print("-" * 50)
 
-    second_order_weight_list = ["0.0"] + [f"1e-{i}" for i in range(1, 11)]
-    # second_order_weight_list = ["0.0", "1e-1"]
-    # second_order_weight_list = ["0.0"]
+    # with open(final_result, "a+") as fw:
+    #     fw.write(f"{second_order_weight}: {good_ratio}\n")
 
-    for version in range(1, 6):
-        cur_result_list = []
-        print(version, end="")
-        for second_order_weight in second_order_weight_list:
-            model_dir = os.path.join(ckpt_dir, f"{fisrt_order_weight}_{second_order_weight}_V{version}")
-            rectified_flow = load_model_from_dir(model_dir)
-            good_ratio = eval_model(rectified_flow)
-            good_ratio = good_ratio.item()
-            # print(type(good_ratio))
-            # breakpoint()
-
-            cur_result_list.append(good_ratio)
-
-            print("&", f"{good_ratio:.2f}", end=" ")
-
-        print("\\\\ \n", end="")
-
-            # print("-" * 50)
-            # print("version", version)
-            # print("second_order_weight:", second_order_weight)
-            # print(f"Good ratio: {good_ratio * 100}%")
-            # print("-" * 50)
-
-        # results_list.append(cur_result_list)
-
-    # # save results list to json
-    # with open("results.json", "w") as fw:
-    #     json.dump(results_list, fw)
-
+        # print("\n")
