@@ -9,15 +9,19 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import wandb
 import os
+import argparse
 
 ############# hyper parameters ##########
-wandb_enable = True
+wandb_enable = False
 wandb_log_name = "second_order_v6"
 ckpt_dir = "checkpoints"
 first_order_loss_scale = 1e6
 second_order_loss_scale = 1
 
 os.makedirs(ckpt_dir, exist_ok=True)
+
+# Check if GPU is available
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 D = 10.
 M = D+5
@@ -34,6 +38,11 @@ target_mix = Categorical(torch.tensor([1/COMP for i in range(COMP)]))
 target_comp = MultivariateNormal(torch.tensor([[D * np.sqrt(3) / 2., - D / 2.], [-D * np.sqrt(3) / 2., - D / 2.], [0.0, D * np.sqrt(3) / 2.]]).float(), VAR * torch.stack([torch.eye(2) for i in range(COMP)]))
 target_model = MixtureSameFamily(target_mix, target_comp)
 samples_1 = target_model.sample([10000])
+
+# move samples to GPU
+samples_0 = samples_0.to(device)
+samples_1 = samples_1.to(device)
+
 print('Shape of the samples:', samples_0.shape, samples_1.shape)
 
 plt.figure(figsize=(4,4))
@@ -47,8 +56,6 @@ plt.legend()
 plt.tight_layout()
 
 # check if there is nan in torch tensor
-# def has_nan(tensor):
-#     return torch.isnan(tensor).any().item()
 def has_nan(tensor):
     nan_indices = torch.nonzero(torch.isnan(tensor), as_tuple=True)
     if len(nan_indices[0]) > 0:
@@ -56,18 +63,18 @@ def has_nan(tensor):
     else:
         return False, []
 
-def get_gradient_norm(model):
-  grad_norm_dict = {}
-  grad_norm_sum = 0.0
-  # Iterate through model parameters and compute gradient norm
-  for name, param in model.named_parameters():
-      if param.grad is not None:  # Check if gradients exist for the parameter
-          grad_norm = param.grad.data.norm(2)  # L2 norm of the gradient
-          grad_norm_dict[name] = grad_norm.item()
-          # print(f"Gradient norm for {name}: {grad_norm.item()}")
-          grad_norm_sum += grad_norm.item()
+# def get_gradient_norm(model):
+#   grad_norm_dict = {}
+#   grad_norm_sum = 0.0
+#   # Iterate through model parameters and compute gradient norm
+#   for name, param in model.named_parameters():
+#       if param.grad is not None:  # Check if gradients exist for the parameter
+#           grad_norm = param.grad.data.norm(2)  # L2 norm of the gradient
+#           grad_norm_dict[name] = grad_norm.item()
+#           # print(f"Gradient norm for {name}: {grad_norm.item()}")
+#           grad_norm_sum += grad_norm.item()
 
-  return grad_norm_dict, grad_norm_sum
+  # return grad_norm_dict, grad_norm_sum
 
 class MLP(nn.Module):
     def __init__(self, input_dim=2, hidden_num=100):
@@ -151,30 +158,14 @@ class RectifiedFlow():
     # d^2 beta_t / dt^2 = (- 1  / (1 - alpha^2) sqrt (1 - x^2)) * (d alpha / dt) + (- alpha  / sqrt{1 - alpha^2}) * (d^2 alpha / dt^2)
     second_order_beta = (- 1 / ((1 - alpha_t**2) * torch.sqrt(1 - alpha_t**2))) * first_order_alpha + first_order_beta * second_order_alpha
 
-    is_alpha_t_nan, nan_indices = has_nan(alpha_t)
-    if is_alpha_t_nan:
-        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
-        breakpoint()
-    is_beta_t_nan, nan_indices = has_nan(beta_t)
-    if is_beta_t_nan:
-        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
-        breakpoint()
-    is_first_order_alpha_nan, nan_indices = has_nan(first_order_alpha)
-    if is_first_order_alpha_nan:
-        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
-        breakpoint()
-    is_first_order_beta_nan, nan_indices = has_nan(first_order_beta)
-    if is_first_order_beta_nan:
-        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
-        breakpoint()
-    is_second_order_alpha_nan, nan_indices = has_nan(second_order_alpha)
-    if is_second_order_alpha_nan:
-        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
-        breakpoint()
-    is_second_order_beta_nan, nan_indices = has_nan(second_order_beta)
-    if is_second_order_beta_nan:
-        debug_logger(nan_indices[0], t, alpha_t, beta_t, first_order_alpha, first_order_beta, second_order_alpha, second_order_beta)
-        breakpoint()
+    # to device
+    alpha_t = alpha_t.to(device)
+    beta_t = beta_t.to(device)
+    first_order_alpha = first_order_alpha.to(device)
+    first_order_beta = first_order_beta.to(device)
+    second_order_alpha = second_order_alpha.to(device)
+    second_order_beta = second_order_beta.to(device)
+    t = t.to(device)
 
     z_t = alpha_t * z1 + beta_t * z0
     first_order_gt = first_order_alpha * z1 + first_order_beta * z0
@@ -213,15 +204,13 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
 
   first_order_loss_list = []
   second_order_loss_list = []
-  first_order_grad_norm_list = []
-  second_order_grad_norm_list = []
 
   for i in tqdm(range(inner_iters+1)):
     optimizer.zero_grad()
     indices = torch.randperm(len(pairs))[:batchsize]
     batch = pairs[indices]
-    z0 = batch[:, 0].detach().clone()
-    z1 = batch[:, 1].detach().clone()
+    z0 = batch[:, 0].detach().clone().to(device)
+    z1 = batch[:, 1].detach().clone().to(device)
 
     z_t, t, first_order_gt, second_order_gt = rectified_flow.get_train_tuple(z0=z0, z1=z1)
 
@@ -248,15 +237,15 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
 
     loss.backward()
 
-    # should get the gradient norm here
-    first_order_grad_norm_dict, first_order_grad_norm_sum = get_gradient_norm(rectified_flow.first_order_model)
+    # # should get the gradient norm here
+    # first_order_grad_norm_dict, first_order_grad_norm_sum = get_gradient_norm(rectified_flow.first_order_model)
 
-    # print(first_order_grad_norm_dict)
-    # print(first_order_grad_norm_sum)
-    # breakpoint()
-    # first_order_grad_norm_list.append(first_order_grad_norm_sum)
+    # # print(first_order_grad_norm_dict)
+    # # print(first_order_grad_norm_sum)
+    # # breakpoint()
+    # # first_order_grad_norm_list.append(first_order_grad_norm_sum)
 
-    second_order_grad_norm_dict, second_order_grad_norm_sum = get_gradient_norm(rectified_flow.second_order_model)
+    # second_order_grad_norm_dict, second_order_grad_norm_sum = get_gradient_norm(rectified_flow.second_order_model)
 
 
     if wandb_enable:
@@ -264,10 +253,10 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
             "first_order_loss": first_order_loss_mean.item(),
             "second_order_loss": second_order_loss_mean.item(),
             "total_loss": loss.item(),
-            "grad_norm/first_order_grad_norm_sum" : first_order_grad_norm_sum,
-            "grad_norm/second_order_grad_norm_sum" : second_order_grad_norm_sum,
-            "grad_norm/first_order_grad_norm_max" : max(first_order_grad_norm_dict.values()),
-            "grad_norm/second_order_grad_norm_max" : max(second_order_grad_norm_dict.values())
+            # "grad_norm/first_order_grad_norm_sum" : first_order_grad_norm_sum,
+            # "grad_norm/second_order_grad_norm_sum" : second_order_grad_norm_sum,
+            # "grad_norm/first_order_grad_norm_max" : max(first_order_grad_norm_dict.values()),
+            # "grad_norm/second_order_grad_norm_max" : max(second_order_grad_norm_dict.values())
         })
 
     # print(second_order_grad_norm_dict)
@@ -289,8 +278,8 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
 if __name__ == '__main__':
 
   # generate training data
-  x_0 = samples_0.detach().clone()[torch.randperm(len(samples_0))]
-  x_1 = samples_1.detach().clone()[torch.randperm(len(samples_1))]
+  x_0 = samples_0.detach().clone()[torch.randperm(len(samples_0))].to(device)
+  x_1 = samples_1.detach().clone()[torch.randperm(len(samples_1))].to(device)
   x_pairs = torch.stack([x_0, x_1], dim=1)
   print(x_pairs.shape)
 
@@ -300,7 +289,7 @@ if __name__ == '__main__':
   batchsize = 2048
   input_dim = 2
 
-  rectified_flow_1 = RectifiedFlow(first_order_model=MLP(input_dim, hidden_num=100), second_order_model=MLP_2nd_order(input_dim, hidden_num=100), num_steps=100)
+  rectified_flow_1 = RectifiedFlow(first_order_model=MLP(input_dim, hidden_num=100).to(device), second_order_model=MLP_2nd_order(input_dim, hidden_num=100).to(device), num_steps=100)
   rectified_flow_model_parameters = list(rectified_flow_1.first_order_model.parameters()) + list(rectified_flow_1.second_order_model.parameters())
   optimizer = torch.optim.Adam(rectified_flow_model_parameters, lr=5e-3)
 
