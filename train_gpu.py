@@ -10,13 +10,14 @@ from tqdm import tqdm
 import wandb
 import os
 import argparse
+import logging
 
 ############# hyper parameters ##########
 wandb_enable = False
 wandb_log_name = "second_order_v6"
 ckpt_dir = "checkpoints"
-first_order_loss_scale = 1
-second_order_loss_scale = 1e-8
+# first_order_loss_scale = 1
+# second_order_loss_scale = 1e-8
 
 os.makedirs(ckpt_dir, exist_ok=True)
 
@@ -199,7 +200,7 @@ class RectifiedFlow():
 
     return traj
   
-def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iters):
+def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iters, first_order_loss_scale, second_order_loss_scale):
   loss_curve = []
 
   first_order_loss_list = []
@@ -237,17 +238,6 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
 
     loss.backward()
 
-    # # should get the gradient norm here
-    # first_order_grad_norm_dict, first_order_grad_norm_sum = get_gradient_norm(rectified_flow.first_order_model)
-
-    # # print(first_order_grad_norm_dict)
-    # # print(first_order_grad_norm_sum)
-    # # breakpoint()
-    # # first_order_grad_norm_list.append(first_order_grad_norm_sum)
-
-    # second_order_grad_norm_dict, second_order_grad_norm_sum = get_gradient_norm(rectified_flow.second_order_model)
-
-
     if wandb_enable:
         wandb.log({
             "first_order_loss": first_order_loss_mean.item(),
@@ -276,6 +266,20 @@ def train_rectified_flow(rectified_flow, optimizer, pairs, batchsize, inner_iter
   return rectified_flow, loss_curve
 
 if __name__ == '__main__':
+
+  # set up logging
+  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--first_order_weight', type=float, default=1.0)
+  parser.add_argument('--second_order_weight', type=float, default=1e-8)
+  parser.add_argument('--save_dir_name', type=str, default="debug")
+  args = parser.parse_args()
+
+  for arg, value in vars(args).items():
+    logging.info(f"{arg}: {value}")
+
+
 
   # generate training data
   x_0 = samples_0.detach().clone()[torch.randperm(len(samples_0))].to(device)
@@ -309,12 +313,12 @@ if __name__ == '__main__':
           # }
       )
 
-  rectified_flow_1, loss_curve = train_rectified_flow(rectified_flow_1, optimizer, x_pairs, batchsize, iterations)
+  rectified_flow_1, loss_curve = train_rectified_flow(rectified_flow_1, optimizer, x_pairs, batchsize, iterations, args.first_order_weight, args.second_order_weight)
   plt.plot(np.linspace(0, iterations, iterations+1), loss_curve[:(iterations+1)])
   plt.title('Training Loss Curve')
 
   # save rectified_flow_1
-  save_dir = os.path.join(ckpt_dir, wandb_log_name)
+  save_dir = os.path.join(ckpt_dir, args.save_dir_name)
   os.makedirs(save_dir, exist_ok=True)
   first_order_model_save_path = os.path.join(save_dir, 'first_order_model.pt')
   second_order_model_save_path = os.path.join(save_dir, 'second_order_model.pt')
