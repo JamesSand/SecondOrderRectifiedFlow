@@ -3,7 +3,7 @@
 > By JamesSand
 
 
-I have also implement a google colab. You can find the colab [here](https://colab.research.google.com/drive/11pCMnpmV9H2cRhvT1mF1pVk_ySH3q0XZ?usp=sharing)
+<!-- I have also implement a google colab. You can find the colab [here](https://colab.research.google.com/drive/11pCMnpmV9H2cRhvT1mF1pVk_ySH3q0XZ?usp=sharing) -->
 
 ### 0 Current result
 
@@ -54,7 +54,7 @@ first order weight: 1e6; second order weight: 1
   <img src="images/v5_traj.png" alt="Figure 2" width="45%">
 </div>
 
-#### Gradient norm
+<!-- #### Gradient norm
 
 The gradient norm is reported under: first order weight: 1e6; second order weight: 1
 
@@ -68,7 +68,7 @@ The gradient norm is reported under: first order weight: 1e6; second order weigh
 
 <div style="display: flex; justify-content: center; gap: 10px;">
   <img src="images/second_grad_norm.png" alt="Figure 1" width="80%">
-</div>
+</div> -->
 
 
 ### 1 Env setup
