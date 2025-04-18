@@ -23,6 +23,14 @@ Here is the code for training the second order model. Please cite our related pa
   year={2025}  
 }
 
+
+@article{liang2025hofar,  
+  title={Hofar: High-order augmentation of flow autoregressive transformers},  
+  author={Liang, Yingyu and Sha, Zhizhou and Shi, Zhenmei and Song, Zhao and Wan, Mingda},  
+  journal={arXiv preprint arXiv:2503.08032},  
+  year={2025}  
+}
+
 <!-- #### Loss curve
 
 First order loss is ok. But second order loss has some spikes.
