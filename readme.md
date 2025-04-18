@@ -9,8 +9,8 @@
 
 Here is the code for training the second order model. Please cite our related papers which using second order method.
 
-@article{chen2025high, 
-  title={High-Order Matching for One-Step Shortcut Diffusion Models}, 
+@article{chen2025high,  
+  title={High-Order Matching for One-Step Shortcut Diffusion Models},  
   author={Chen, Bo and Gong, Chengyue and Li, Xiaoyu and Liang, Yingyu and Sha, Zhizhou and Shi, Zhenmei and Song, Zhao and Wan, Mingda}, 
   journal={arXiv preprint arXiv:2502.00688}, 
   year={2025} 
