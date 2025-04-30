@@ -5,31 +5,45 @@
 
 <!-- I have also implement a google colab. You can find the colab [here](https://colab.research.google.com/drive/11pCMnpmV9H2cRhvT1mF1pVk_ySH3q0XZ?usp=sharing) -->
 
-### 0 Current result
+### 0 Releated Works
 
-Here is the code for training the second order model. Please cite our related papers which using second order method.
+Here is the code for training the second order model. 
 
+Please cite our related papers which using second order method.
+
+[High-Order Matching for One-Step Shortcut Diffusion Models](https://arxiv.org/pdf/2502.00688)
+
+```bibtex
 @article{chen2025high,  
   title={High-Order Matching for One-Step Shortcut Diffusion Models},  
   author={Chen, Bo and Gong, Chengyue and Li, Xiaoyu and Liang, Yingyu and Sha, Zhizhou and Shi, Zhenmei and Song, Zhao and Wan, Mingda},  
   journal={arXiv preprint arXiv:2502.00688},  
   year={2025}  
 }
+```
 
-@article{cao2025force,  
-  title={Force Matching with Relativistic Constraints: A Physics-Inspired Approach to Stable and Efficient Generative Modeling},  
-  author={Cao, Yang and Chen, Bo and Li, Xiaoyu and Liang, Yingyu and Sha, Zhizhou and Shi, Zhenmei and Song, Zhao and Wan, Mingda},  
-  journal={arXiv preprint arXiv:2502.08150},  
-  year={2025}  
-}
-
-
+[Hofar: High-order augmentation of flow autoregressive transformers](https://arxiv.org/pdf/2503.08032)
+```bibtex
 @article{liang2025hofar,  
   title={Hofar: High-order augmentation of flow autoregressive transformers},  
   author={Liang, Yingyu and Sha, Zhizhou and Shi, Zhenmei and Song, Zhao and Wan, Mingda},  
   journal={arXiv preprint arXiv:2503.08032},  
   year={2025}  
 }
+```
+
+[Force Matching with Relativistic Constraints: A Physics-Inspired Approach to Stable and Efficient Generative Modeling](https://arxiv.org/pdf/2502.08150)
+```bibtex
+@article{cao2025force,  
+  title={Force Matching with Relativistic Constraints: A Physics-Inspired Approach to Stable and Efficient Generative Modeling},  
+  author={Cao, Yang and Chen, Bo and Li, Xiaoyu and Liang, Yingyu and Sha, Zhizhou and Shi, Zhenmei and Song, Zhao and Wan, Mingda},  
+  journal={arXiv preprint arXiv:2502.08150},  
+  year={2025}  
+}
+```
+
+
+
 
 <!-- #### Loss curve
 
