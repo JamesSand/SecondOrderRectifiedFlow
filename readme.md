@@ -66,30 +66,7 @@ First order loss is ok. But second order loss has some spikes.
 </div> -->
 
 
-**Visualization Result**
-
-first order weight: 1; second order weight: 1e-11
-
-<div style="display: flex; justify-content: center; gap: 10px;">
-  <img src="images/v3_scatter.png" alt="Figure 1" width="45%">
-  <img src="images/v3_traj.png" alt="Figure 2" width="45%">
-</div>
-
-first order weight: 1; second order weight: 1e-8
-
-<div style="display: flex; justify-content: center; gap: 10px;">
-  <img src="images/v4_scatter.png" alt="Figure 1" width="45%">
-  <img src="images/v4_traj.png" alt="Figure 2" width="45%">
-</div>
-
-first order weight: 1e6; second order weight: 1
-
-<div style="display: flex; justify-content: center; gap: 10px;">
-  <img src="images/v5_scatter.png" alt="Figure 1" width="45%">
-  <img src="images/v5_traj.png" alt="Figure 2" width="45%">
-</div>
-
-**Model Architecture**
+##### Model Architecture
 
 The First Order model is defined at [here](https://github.com/JamesSand/SecondOrderRectifiedFlow/blob/f5c8bfc438152149b5fb0d571f56abebc123edde/second_order_code.py#L72)
 
@@ -138,6 +115,30 @@ class MLP_2nd_order(nn.Module):
 
 <div style="display: flex; justify-content: center; gap: 10px;">
   <img src="images/model_architecture.png" alt="Figure 1" width="90%">
+</div>
+
+
+##### Visualization Result
+
+first order weight: 1; second order weight: 1e-11
+
+<div style="display: flex; justify-content: center; gap: 10px;">
+  <img src="images/v3_scatter.png" alt="Figure 1" width="45%">
+  <img src="images/v3_traj.png" alt="Figure 2" width="45%">
+</div>
+
+first order weight: 1; second order weight: 1e-8
+
+<div style="display: flex; justify-content: center; gap: 10px;">
+  <img src="images/v4_scatter.png" alt="Figure 1" width="45%">
+  <img src="images/v4_traj.png" alt="Figure 2" width="45%">
+</div>
+
+first order weight: 1e6; second order weight: 1
+
+<div style="display: flex; justify-content: center; gap: 10px;">
+  <img src="images/v5_scatter.png" alt="Figure 1" width="45%">
+  <img src="images/v5_traj.png" alt="Figure 2" width="45%">
 </div>
 
  
