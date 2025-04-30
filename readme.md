@@ -113,7 +113,7 @@ class MLP_2nd_order(nn.Module):
 ```
 
 <div style="display: flex; justify-content: center; gap: 10px;">
-  <img src="images/model_architecture.jpg" alt="Figure 1" width="90%">
+  <img src="images/model_architecture.png" alt="Figure 1" width="90%">
 </div>
 
  
