@@ -68,6 +68,10 @@ First order loss is ok. But second order loss has some spikes.
 
 ##### Model Architecture
 
+<div style="display: flex; justify-content: center; gap: 10px;">
+  <img src="images/model_architecture.png" alt="Figure 1" width="90%">
+</div>
+
 The First Order model is defined at [here](https://github.com/JamesSand/SecondOrderRectifiedFlow/blob/f5c8bfc438152149b5fb0d571f56abebc123edde/second_order_code.py#L72)
 
 ```python
@@ -112,10 +116,6 @@ class MLP_2nd_order(nn.Module):
 
         return x
 ```
-
-<div style="display: flex; justify-content: center; gap: 10px;">
-  <img src="images/model_architecture.png" alt="Figure 1" width="90%">
-</div>
 
 
 ##### Visualization Result
