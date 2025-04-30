@@ -65,8 +65,61 @@ First order loss is ok. But second order loss has some spikes.
   <img src="images\v2_tloss.png" alt="Figure 3" width="80%">
 </div> -->
 
+**Model Architecture**
 
-#### Visualization Result
+The First Order model is defined at [here](https://github.com/JamesSand/SecondOrderRectifiedFlow/blob/f5c8bfc438152149b5fb0d571f56abebc123edde/second_order_code.py#L72)
+
+```python
+class MLP(nn.Module):
+    def __init__(self, input_dim=2, hidden_num=100):
+        super().__init__()
+        self.fc1 = nn.Linear(input_dim+1, hidden_num, bias=True)
+        self.fc2 = nn.Linear(hidden_num, hidden_num, bias=True)
+        self.fc3 = nn.Linear(hidden_num, input_dim, bias=True)
+        self.act = lambda x: torch.tanh(x)
+
+    def forward(self, x_input, t):
+        # We only input zero order here, so we have a dimension d input
+        inputs = torch.cat([x_input, t], dim=1)
+        x = self.fc1(inputs)
+        x = self.act(x)
+        x = self.fc2(x)
+        x = self.act(x)
+        x = self.fc3(x)
+
+        return x
+```
+
+The Second Order model is defined at [here](https://github.com/JamesSand/SecondOrderRectifiedFlow/blob/f5c8bfc438152149b5fb0d571f56abebc123edde/second_order_code.py#L90)
+```python
+class MLP_2nd_order(nn.Module):
+    def __init__(self, input_dim=2, hidden_num=100):
+        super().__init__()
+        self.fc1 = nn.Linear(input_dim + input_dim + 1, hidden_num, bias=True)
+        self.fc2 = nn.Linear(hidden_num, hidden_num, bias=True)
+        self.fc3 = nn.Linear(hidden_num, input_dim, bias=True)
+        self.act = lambda x: torch.tanh(x)
+
+    def forward(self, first_order_input, x_input, t):
+        # We concate zero order and first order here, to get a dimension 2d input
+        inputs = torch.cat([first_order_input, x_input, t], dim=1)
+        x = self.fc1(inputs)
+        x = self.act(x)
+        x = self.fc2(x)
+        x = self.act(x)
+        x = self.fc3(x)
+
+        return x
+```
+
+<div style="display: flex; justify-content: center; gap: 10px;">
+  <img src="images/model_architecture.jpg" alt="Figure 1" width="90%">
+</div>
+
+ 
+
+
+**Visualization Result**
 
 first order weight: 1; second order weight: 1e-11
 
